@@ -48,7 +48,7 @@ class GameLogic {
                 board[i] = PLAYER_ONE
                 if (checkForWinner() == 2) {
                     board[i] = PLAYER_TWO
-                    onGameEnd?.invoke("Computer is moving to ${i + 1}")
+                    onGameEnd?.invoke("Player two is moving to ${i + 1}")
                     return
                 } else {
                     board[i] = current
@@ -62,7 +62,7 @@ class GameLogic {
         } while (board[move] == PLAYER_ONE || board[move] == PLAYER_TWO)
 
         board[move] = PLAYER_TWO
-        onGameEnd?.invoke("Computer is moving to ${move + 1}")
+        onGameEnd?.invoke("Player two is moving to ${move + 1}")
     }
 
     private fun checkForWinner(): Int {

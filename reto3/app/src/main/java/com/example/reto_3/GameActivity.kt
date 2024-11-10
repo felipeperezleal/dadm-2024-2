@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -26,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,8 +46,17 @@ fun  GameActivity() {
     var boardState by remember { mutableStateOf(Array(3) { Array(3) { "" } }) }
     var gameMessage by remember { mutableStateOf("") }
 
+    var playerOneWins by remember { mutableIntStateOf(0) }
+    var playerTwoWins by remember { mutableIntStateOf(0) }
+    var ties by remember { mutableIntStateOf(0) }
+
     gameLogic.onGameEnd = { message ->
         gameMessage = message
+        when {
+            message.contains("X wins") -> playerOneWins++
+            message.contains("O wins") -> playerTwoWins++
+            message.contains("It's a tie") -> ties++
+        }
     }
 
     fun resetGame() {
@@ -54,7 +65,7 @@ fun  GameActivity() {
         gameMessage = ""
     }
 
-    Box(Modifier.fillMaxSize().padding(16.dp).background(backgroundColor)) {
+    Box(Modifier.fillMaxSize().padding(16.dp).background(backgroundColor).statusBarsPadding()) {
         Screen(
             modifier = Modifier.align(Alignment.Center),
             boardState = boardState,
@@ -76,6 +87,9 @@ fun  GameActivity() {
                 }
             },
             onRefresh = { resetGame() },
+            playerOneWins = playerOneWins,
+            playerTwoWins = playerTwoWins,
+            ties = ties,
         )
     }
 }
@@ -87,14 +101,34 @@ fun Screen(
     gameMessage: String,
     onUserMove: (Int, Int) -> Unit,
     onRefresh: () -> Unit,
+    playerOneWins: Int,
+    playerTwoWins: Int,
+    ties: Int
 ) {
     Column(modifier = modifier) {
         Header()
         Spacer(modifier = Modifier.padding(16.dp))
-        Board(modifier = Modifier.weight(1f), boardState = boardState, onUserMove = onUserMove)
-            Text(text = gameMessage, color = Color.Red, fontSize = 20.sp, modifier = Modifier.padding(16.dp))
+        Scoreboard(
+            playerOneWins = playerOneWins,
+            playerTwoWins = playerTwoWins,
+            ties = ties
+        )
         Spacer(modifier = Modifier.padding(16.dp))
+        Board(
+            modifier = Modifier
+                .weight(1f)
+                .padding(top = 16.dp),
+            boardState = boardState,
+            onUserMove = onUserMove
+        )
+        Text(
+            text = gameMessage,
+            color = Color.Blue,
+            fontSize = 20.sp,
+        )
+        Spacer(modifier = Modifier.weight(0.2f))
         Footer(onRefresh = onRefresh)
+        Spacer(modifier = Modifier.weight(0.2f))
     }
 }
 
@@ -104,6 +138,33 @@ fun Header() {
         Text("Tic Tac Toe", fontSize = 24.sp)
     }
 }
+
+@Composable
+fun Scoreboard(
+    playerOneWins: Int,
+    playerTwoWins: Int,
+    ties: Int
+) {
+    Row(
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        ScoreCard(title = "Player X", score = playerOneWins)
+        ScoreCard(title = "Player O", score = playerTwoWins)
+        ScoreCard(title = "Ties", score = ties)
+    }
+}
+
+@Composable
+fun ScoreCard(title: String, score: Int) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(text = title, fontSize = 16.sp)
+        Text(text = score.toString(), fontSize = 24.sp, color = Color.Blue)
+    }
+}
+
 @Composable
 fun Board(modifier: Modifier, boardState: Array<Array<String>>, onUserMove: (Int, Int) -> Unit) {
     Column(
@@ -163,8 +224,8 @@ fun Footer(onRefresh: () -> Unit) {
         modifier = Modifier.fillMaxWidth()
     ) {
         FooterButton(Icons.Default.Refresh) { onRefresh() }
-        FooterButton(Icons.Default.Home) {  }
-        FooterButton(Icons.Default.Settings) {  }
+//        FooterButton(Icons.Default.Home) {  }
+//        FooterButton(Icons.Default.Settings) {  }
     }
 }
 
