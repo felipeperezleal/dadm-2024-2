@@ -1,5 +1,6 @@
 package com.example.reto_4
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +19,10 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
@@ -28,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -114,7 +119,9 @@ fun  GameActivity() {
             onDifficultyChange = { difficulty ->
                 selectedDifficulty = difficulty
                 gameLogic.setDifficultyLevel(selectedDifficulty)
-            }
+                resetGame()
+            },
+            selectedDifficulty = selectedDifficulty
         )
     }
 }
@@ -129,7 +136,8 @@ fun Screen(
     playerOneWins: Int,
     playerTwoWins: Int,
     ties: Int,
-    onDifficultyChange: (GameLogic.DifficultyLevel) -> Unit
+    onDifficultyChange: (GameLogic.DifficultyLevel) -> Unit,
+    selectedDifficulty: GameLogic.DifficultyLevel
 ) {
     Column(modifier = modifier) {
         Header()
@@ -139,8 +147,14 @@ fun Screen(
             playerTwoWins = playerTwoWins,
             ties = ties
         )
-        DifficultySelector(onDifficultyChange = onDifficultyChange)
         Spacer(modifier = Modifier.padding(16.dp))
+        Text(
+            text = "Dificultad: ${selectedDifficulty.name}",
+            fontSize = 18.sp,
+            color = Color.Blue,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        )
+        Spacer(modifier = Modifier.padding(8.dp))
         Board(
             modifier = Modifier
                 .weight(1f)
@@ -152,9 +166,10 @@ fun Screen(
             text = gameMessage,
             color = Color.Blue,
             fontSize = 20.sp,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
         )
         Spacer(modifier = Modifier.weight(0.2f))
-        Footer(onRefresh = onRefresh)
+        Footer(onRefresh = onRefresh, onDifficultyChange = onDifficultyChange)
         Spacer(modifier = Modifier.weight(0.2f))
     }
 }
@@ -189,57 +204,6 @@ fun ScoreCard(title: String, score: Int) {
     ) {
         Text(text = title, fontSize = 16.sp)
         Text(text = score.toString(), fontSize = 24.sp, color = Color.Blue)
-    }
-}
-@Composable
-fun DifficultySelector(onDifficultyChange: (GameLogic.DifficultyLevel) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    var selectedOption by remember { mutableStateOf(GameLogic.DifficultyLevel.Expert) }
-    val contextForToast = LocalContext.current.applicationContext
-
-    fun onOptionSelected(difficulty: GameLogic.DifficultyLevel) {
-        selectedOption = difficulty
-        onDifficultyChange(difficulty)
-        expanded = false
-        Toast.makeText(contextForToast, "Dificultad seleccionada: ${difficulty.name}", Toast.LENGTH_SHORT).show()
-    }
-
-    Column(
-        modifier = Modifier
-            .wrapContentSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(text = "Selecciona la dificultad", Modifier.padding(top = 10.dp), fontSize = 20.sp)
-
-        Box(
-            modifier = Modifier
-                .wrapContentSize()
-                .padding(start = 15.dp)
-                .wrapContentSize(align = Alignment.TopStart),
-            contentAlignment = Alignment.Center
-        ) {
-            IconButton(
-                onClick = { expanded = true }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.ArrowDropDown,
-                    contentDescription = "Abrir menú"
-                )
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                GameLogic.DifficultyLevel.entries.forEach { difficulty ->
-                    DropdownMenuItem(
-                        onClick = {
-                            onOptionSelected(difficulty)
-                        },
-                        text = {Text(difficulty.name)}
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -299,14 +263,90 @@ fun TicTacToeButton(
 }
 
 @Composable
-fun Footer(onRefresh: () -> Unit) {
+fun Footer(
+    onRefresh: () -> Unit,
+    onDifficultyChange: (GameLogic.DifficultyLevel) -> Unit
+) {
+    val contextForExit = LocalContext.current
+    var showExitDialog by remember { mutableStateOf(false) }
     Row(
         horizontalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier.fillMaxWidth()
     ) {
+        FooterButton(Icons.Default.Close) {
+            showExitDialog = true
+        }
         FooterButton(Icons.Default.Refresh) { onRefresh() }
-//        FooterButton(Icons.Default.Home) {  }
-//        FooterButton(Icons.Default.Settings) {  }
+        DifficultySelectorButton(onDifficultyChange = onDifficultyChange)
+    }
+    if (showExitDialog) {
+        ExitConfirmationDialog(
+            onDismiss = { showExitDialog = false },
+            onConfirmExit = {
+                (contextForExit as? Activity)?.finish()
+            }
+        )
+    }
+}
+
+@Composable
+fun ExitConfirmationDialog(
+    onDismiss: () -> Unit,
+    onConfirmExit: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "Are you sure you want to quit?")
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirmExit) {
+                Text("Yes")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("No")
+            }
+        }
+    )
+}
+@Composable
+fun DifficultySelectorButton(onDifficultyChange: (GameLogic.DifficultyLevel) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    var selectedOption by remember { mutableStateOf(GameLogic.DifficultyLevel.Expert) }
+    val contextForToast = LocalContext.current.applicationContext
+
+    fun onOptionSelected(difficulty: GameLogic.DifficultyLevel) {
+        selectedOption = difficulty
+        onDifficultyChange(difficulty)
+        expanded = false
+        Toast.makeText(contextForToast, "Dificultad seleccionada: ${difficulty.name}", Toast.LENGTH_SHORT).show()
+
+    }
+
+    Box(
+        modifier = Modifier
+            .wrapContentSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        FooterButton(icon = Icons.Default.Settings) {
+            expanded = true
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            GameLogic.DifficultyLevel.entries.forEach { difficulty ->
+                DropdownMenuItem(
+                    onClick = {
+                        onOptionSelected(difficulty)
+                    },
+                    text = { Text(difficulty.name) }
+                )
+            }
+        }
     }
 }
 
@@ -321,6 +361,9 @@ fun FooterButton(icon: ImageVector, onClick: () -> Unit) {
             contentColor = Color.White
         )
     ) {
-        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(24.dp))
+        Icon(imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
