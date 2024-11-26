@@ -56,6 +56,10 @@ class GameLogic {
         if (move != -1) {
             board[move] = PLAYER_TWO
             onGameEnd?.invoke("Player two is moving to ${move + 1}")
+            val result = checkForWinner()
+            if (result != 0) {
+                onGameEnd?.invoke(getResultMessage(result))
+            }
         }
     }
 

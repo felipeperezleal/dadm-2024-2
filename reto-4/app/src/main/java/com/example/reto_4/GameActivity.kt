@@ -1,9 +1,7 @@
 package com.example.reto_4
 
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,20 +18,16 @@ import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -46,7 +40,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -62,11 +55,16 @@ fun  GameActivity() {
     var playerTwoWins by remember { mutableIntStateOf(0) }
     var ties by remember { mutableIntStateOf(0) }
 
+    var isGameOver by remember { mutableStateOf(false) }
+
     var selectedDifficulty by remember { mutableStateOf(GameLogic.DifficultyLevel.Expert) }
     gameLogic.setDifficultyLevel(selectedDifficulty)
 
     gameLogic.onGameEnd = { message ->
         gameMessage = message
+        if (message.contains("X wins") || message.contains("O wins") || message.contains("It's a tie")) {
+            isGameOver = true
+        }
         when {
             message.contains("X wins") -> playerOneWins++
             message.contains("O wins") -> playerTwoWins++
@@ -78,25 +76,33 @@ fun  GameActivity() {
         gameLogic.resetGame()
         boardState = Array(3) { Array(3) { "" } }
         gameMessage = ""
+        isGameOver = false
     }
 
-    Box(Modifier.fillMaxSize().padding(16.dp).background(backgroundColor).statusBarsPadding()) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .background(backgroundColor)
+            .statusBarsPadding()) {
         Screen(
             modifier = Modifier.align(Alignment.Center),
             boardState = boardState,
             gameMessage = gameMessage,
             onUserMove = { row, col ->
-                val position = row * 3 + col
-                gameLogic.makeMove(position, true)
-                boardState[row][col] = GameLogic.PLAYER_ONE.toString()
-                gameLogic.makeMove(-1, false)
-                val currentBoardState = gameLogic.getBoardState()
-                for (i in 0..2) {
-                    for (j in 0..2) {
-                        boardState[i][j] = when (currentBoardState[i * 3 + j]) {
-                            GameLogic.PLAYER_ONE -> "X"
-                            GameLogic.PLAYER_TWO -> "O"
-                            else -> ""
+                if (!isGameOver) {
+                    val position = row * 3 + col
+                    gameLogic.makeMove(position, true)
+                    boardState[row][col] = GameLogic.PLAYER_ONE.toString()
+                    gameLogic.makeMove(-1, false)
+                    val currentBoardState = gameLogic.getBoardState()
+                    for (i in 0..2) {
+                        for (j in 0..2) {
+                            boardState[i][j] = when (currentBoardState[i * 3 + j]) {
+                                GameLogic.PLAYER_ONE -> "X"
+                                GameLogic.PLAYER_TWO -> "O"
+                                else -> ""
+                            }
                         }
                     }
                 }
@@ -256,7 +262,8 @@ fun Board(modifier: Modifier, boardState: Array<Array<String>>, onUserMove: (Int
                         button = boardState[row][col],
                         onClick = {
                             onUserMove(row, col)
-                        }
+                        },
+                        isGameOver = true
                     )
                     if (col < 2) {
                         VerticalDivider(color = Color.Gray, modifier = Modifier.height(100.dp))
@@ -274,9 +281,10 @@ fun Board(modifier: Modifier, boardState: Array<Array<String>>, onUserMove: (Int
 fun TicTacToeButton(
     button: String,
     onClick: () -> Unit,
+    isGameOver: Boolean
 ) {
     Button(
-        onClick = onClick,
+        onClick = { onClick() },
         colors = ButtonDefaults.buttonColors(
             contentColor = Color.Black,
             containerColor = Color.White
