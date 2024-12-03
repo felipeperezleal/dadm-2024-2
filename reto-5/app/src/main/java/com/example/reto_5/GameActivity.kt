@@ -1,6 +1,12 @@
 package com.example.reto_5
 
 import android.app.Activity
+import android.content.Context
+import android.media.AudioAttributes
+import android.media.SoundPool
+import android.os.Handler
+import android.os.Looper
+import android.provider.CalendarContract.Colors
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -19,7 +25,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -50,6 +59,12 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun  GameActivity() {
+    val context = LocalContext.current
+    val soundPool = remember { createSoundPool(context) }
+    val clickSoundId = remember { loadClickSound(context, soundPool) }
+    val computerMoveSoundId = remember { loadComputerMoveSound(context, soundPool) }
+    var isMuted by remember { mutableStateOf(false) }
+
     val backgroundColor = Color.White
 
     val gameLogic = remember { GameLogic() }
@@ -63,6 +78,7 @@ fun  GameActivity() {
     var isGameOver by remember { mutableStateOf(false) }
 
     var selectedDifficulty by remember { mutableStateOf(GameLogic.DifficultyLevel.Expert) }
+
     gameLogic.setDifficultyLevel(selectedDifficulty)
 
     gameLogic.onGameEnd = { message ->
@@ -121,7 +137,12 @@ fun  GameActivity() {
                 gameLogic.setDifficultyLevel(selectedDifficulty)
                 resetGame()
             },
-            selectedDifficulty = selectedDifficulty
+            selectedDifficulty = selectedDifficulty,
+            onMuteToggle = { isMuted = !isMuted },
+            isMuted = isMuted,
+            soundPool = soundPool,
+            clickSoundId = clickSoundId,
+            computerMoveSoundId = computerMoveSoundId
         )
     }
 }
@@ -137,7 +158,12 @@ fun Screen(
     playerTwoWins: Int,
     ties: Int,
     onDifficultyChange: (GameLogic.DifficultyLevel) -> Unit,
-    selectedDifficulty: GameLogic.DifficultyLevel
+    selectedDifficulty: GameLogic.DifficultyLevel,
+    onMuteToggle: () -> Unit,
+    isMuted: Boolean,
+    soundPool: SoundPool,
+    clickSoundId: Int,
+    computerMoveSoundId: Int
 ) {
     Column(modifier = modifier) {
         Header()
@@ -149,9 +175,9 @@ fun Screen(
         )
         Spacer(modifier = Modifier.padding(16.dp))
         Text(
-            text = "Dificultad: ${selectedDifficulty.name}",
+            text = "Difficulty: ${selectedDifficulty.name}",
             fontSize = 18.sp,
-            color = Color.Blue,
+            color = Color(0xFF98c1d9),
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
         Spacer(modifier = Modifier.padding(8.dp))
@@ -160,16 +186,20 @@ fun Screen(
                 .weight(1f)
                 .padding(top = 16.dp),
             boardState = boardState,
-            onUserMove = onUserMove
+            onUserMove = onUserMove,
+            isMuted = isMuted,
+            soundPool = soundPool,
+            clickSoundId = clickSoundId,
+            computerMoveSoundId = computerMoveSoundId
         )
         Text(
             text = gameMessage,
-            color = Color.Blue,
+            color = Color(0xFF98c1d9),
             fontSize = 20.sp,
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
         Spacer(modifier = Modifier.weight(0.2f))
-        Footer(onRefresh = onRefresh, onDifficultyChange = onDifficultyChange)
+        Footer(onRefresh = onRefresh, onDifficultyChange = onDifficultyChange, onMuteToggle = onMuteToggle, isMuted = isMuted)
         Spacer(modifier = Modifier.weight(0.2f))
     }
 }
@@ -203,13 +233,13 @@ fun ScoreCard(title: String, score: Int) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(text = title, fontSize = 16.sp)
-        Text(text = score.toString(), fontSize = 24.sp, color = Color.Blue)
+        Text(text = score.toString(), fontSize = 24.sp, color = Color(0xFF98c1d9),)
     }
 }
 
 
 @Composable
-fun Board(modifier: Modifier, boardState: Array<Array<String>>, onUserMove: (Int, Int) -> Unit) {
+fun Board(modifier: Modifier, boardState: Array<Array<String>>, onUserMove: (Int, Int) -> Unit, isMuted: Boolean, soundPool: SoundPool, clickSoundId: Int, computerMoveSoundId: Int) {
     Column(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -227,7 +257,11 @@ fun Board(modifier: Modifier, boardState: Array<Array<String>>, onUserMove: (Int
                         onClick = {
                             onUserMove(row, col)
                         },
-                        isGameOver = true
+                        isGameOver = true,
+                        isMuted = isMuted,
+                        soundPool = soundPool,
+                        clickSoundId = clickSoundId,
+                        computerMoveSoundId = computerMoveSoundId
                     )
                     if (col < 2) {
                         VerticalDivider(color = Color.Gray, modifier = Modifier.height(100.dp))
@@ -245,7 +279,11 @@ fun Board(modifier: Modifier, boardState: Array<Array<String>>, onUserMove: (Int
 fun TicTacToeButton(
     button: String,
     onClick: () -> Unit,
-    isGameOver: Boolean
+    isGameOver: Boolean,
+    isMuted: Boolean,
+    soundPool: SoundPool,
+    clickSoundId: Int,
+    computerMoveSoundId: Int
 ) {
     Button(
         onClick = { onClick() },
@@ -256,17 +294,50 @@ fun TicTacToeButton(
         modifier = Modifier.size(100.dp),
     ) {
         when (button) {
-            "X" -> Image(painter = painterResource(id = R.drawable.ic_x), contentDescription = "X", modifier = Modifier.fillMaxSize())
-            "O" -> Image(painter = painterResource(id = R.drawable.ic_o), contentDescription = "O", modifier = Modifier.fillMaxSize())
+
+            "X" -> {
+                Image(painter = painterResource(id = R.drawable.ic_x), contentDescription = "X", modifier = Modifier.fillMaxSize())
+                if (!isMuted) {
+                    soundPool.play(clickSoundId, 1f, 1f, 0, 0, 1f)
+                }
+            }
+            "O" -> {
+                Image(painter = painterResource(id = R.drawable.ic_o), contentDescription = "O", modifier = Modifier.fillMaxSize())
+                if (!isMuted) {
+                    soundPool.play(computerMoveSoundId, 1f, 1f, 0, 0, 1f)
+                }
+            }
             else -> Unit
         }
     }
 }
 
+fun createSoundPool(context: Context): SoundPool {
+    return SoundPool.Builder()
+        .setMaxStreams(1)
+        .setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+        )
+        .build()
+}
+
+fun loadClickSound(context: Context, soundPool: SoundPool): Int {
+    return soundPool.load(context, R.raw.tap, 1)
+}
+
+fun loadComputerMoveSound(context: Context, soundPool: SoundPool): Int {
+    return soundPool.load(context, R.raw.tap2, 1)
+}
+
 @Composable
 fun Footer(
     onRefresh: () -> Unit,
-    onDifficultyChange: (GameLogic.DifficultyLevel) -> Unit
+    onDifficultyChange: (GameLogic.DifficultyLevel) -> Unit,
+    onMuteToggle: () -> Unit,
+    isMuted: Boolean
 ) {
     val contextForExit = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
@@ -279,6 +350,7 @@ fun Footer(
         }
         FooterButton(Icons.Default.Refresh) { onRefresh() }
         DifficultySelectorButton(onDifficultyChange = onDifficultyChange)
+        MuteButton(onMuteToggle = onMuteToggle, isMuted = isMuted)
     }
     if (showExitDialog) {
         ExitConfirmationDialog(
@@ -322,7 +394,7 @@ fun DifficultySelectorButton(onDifficultyChange: (GameLogic.DifficultyLevel) -> 
         selectedOption = difficulty
         onDifficultyChange(difficulty)
         expanded = false
-        Toast.makeText(contextForToast, "Dificultad seleccionada: ${difficulty.name}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(contextForToast, "Selected difficulty: ${difficulty.name}", Toast.LENGTH_SHORT).show()
 
     }
 
@@ -348,6 +420,26 @@ fun DifficultySelectorButton(onDifficultyChange: (GameLogic.DifficultyLevel) -> 
                 )
             }
         }
+    }
+}
+
+@Composable
+fun MuteButton(onMuteToggle: () -> Unit, isMuted: Boolean) {
+    Button(
+        onClick = onMuteToggle,
+        modifier = Modifier.size(64.dp)
+    ) {
+        val iconRes = if (isMuted) {
+            R.drawable.volume_off
+        } else {
+            R.drawable.volume_up
+        }
+
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = if (isMuted) "Muted" else "Unmuted",
+            modifier = Modifier.size(32.dp)
+        )
     }
 }
 

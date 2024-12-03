@@ -1,5 +1,7 @@
 package com.example.reto_5
 
+import android.os.Handler
+import android.os.Looper
 import java.util.Random
 
 class GameLogic {
@@ -52,7 +54,6 @@ class GameLogic {
                 if (move == -1) move = getRandomMove()
             }
         }
-
         if (move != -1) {
             board[move] = PLAYER_TWO
             onGameEnd?.invoke("Player two is moving to ${move + 1}")
