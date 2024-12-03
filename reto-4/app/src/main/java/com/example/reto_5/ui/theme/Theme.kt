@@ -1,4 +1,4 @@
-package com.example.reto_4.ui.theme
+package com.example.reto_5.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
