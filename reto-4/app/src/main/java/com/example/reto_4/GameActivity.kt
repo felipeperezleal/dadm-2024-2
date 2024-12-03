@@ -1,8 +1,7 @@
-package com.example.reto_5
+package com.example.reto_4
 
 import android.app.Activity
 import android.widget.Toast
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -29,6 +29,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,7 +45,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -255,11 +255,10 @@ fun TicTacToeButton(
         ),
         modifier = Modifier.size(100.dp),
     ) {
-        when (button) {
-            "X" -> Image(painter = painterResource(id = R.drawable.ic_x), contentDescription = "X", modifier = Modifier.fillMaxSize())
-            "O" -> Image(painter = painterResource(id = R.drawable.ic_o), contentDescription = "O", modifier = Modifier.fillMaxSize())
-            else -> Unit
-        }
+        Text(
+            text = button,
+            fontSize = 50.sp
+        )
     }
 }
 
