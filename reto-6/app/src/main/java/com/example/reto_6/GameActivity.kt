@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,21 +61,21 @@ fun GameActivity() {
     val soundPool = remember { createSoundPool(context) }
     val clickSoundId = remember { loadClickSound(context, soundPool) }
     val computerMoveSoundId = remember { loadComputerMoveSound(context, soundPool) }
-    var isMuted by remember { mutableStateOf(false) }
+    var isMuted by rememberSaveable  { mutableStateOf(false) }
 
     val backgroundColor = Color.White
 
     val gameLogic = remember { GameLogic() }
-    var boardState by remember { mutableStateOf(Array(3) { Array(3) { "" } }) }
-    var gameMessage by remember { mutableStateOf("") }
+    var boardState by rememberSaveable  { mutableStateOf(Array(3) { Array(3) { "" } }) }
+    var gameMessage by rememberSaveable  { mutableStateOf("") }
 
-    var playerOneWins by remember { mutableIntStateOf(0) }
-    var playerTwoWins by remember { mutableIntStateOf(0) }
-    var ties by remember { mutableIntStateOf(0) }
+    var playerOneWins by rememberSaveable  { mutableIntStateOf(0) }
+    var playerTwoWins by rememberSaveable  { mutableIntStateOf(0) }
+    var ties by rememberSaveable  { mutableIntStateOf(0) }
 
-    var isGameOver by remember { mutableStateOf(false) }
+    var isGameOver by rememberSaveable  { mutableStateOf(false) }
 
-    var selectedDifficulty by remember { mutableStateOf(GameLogic.DifficultyLevel.Expert) }
+    var selectedDifficulty by rememberSaveable  { mutableStateOf(GameLogic.DifficultyLevel.Expert) }
 
     gameLogic.setDifficultyLevel(selectedDifficulty)
 
