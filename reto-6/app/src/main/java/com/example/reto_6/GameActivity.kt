@@ -69,13 +69,15 @@ fun GameActivity() {
     var boardState by rememberSaveable  { mutableStateOf(Array(3) { Array(3) { "" } }) }
     var gameMessage by rememberSaveable  { mutableStateOf("") }
 
-    var playerOneWins by rememberSaveable  { mutableIntStateOf(0) }
-    var playerTwoWins by rememberSaveable  { mutableIntStateOf(0) }
-    var ties by rememberSaveable  { mutableIntStateOf(0) }
+    val (savedPlayerOneWins, savedPlayerTwoWins, savedTies) = loadScores(context)
+
+    var playerOneWins by rememberSaveable  { mutableIntStateOf(savedPlayerOneWins) }
+    var playerTwoWins by rememberSaveable  { mutableIntStateOf(savedPlayerTwoWins) }
+    var ties by rememberSaveable  { mutableIntStateOf(savedTies) }
 
     var isGameOver by rememberSaveable  { mutableStateOf(false) }
 
-    var selectedDifficulty by rememberSaveable  { mutableStateOf(GameLogic.DifficultyLevel.Expert) }
+    var selectedDifficulty by rememberSaveable { mutableStateOf(loadDifficulty(context)) }
 
     gameLogic.setDifficultyLevel(selectedDifficulty)
 
@@ -89,6 +91,7 @@ fun GameActivity() {
             message.contains("O wins") -> playerTwoWins++
             message.contains("It's a tie") -> ties++
         }
+        saveScores(context, playerOneWins, playerTwoWins, ties)
     }
 
     fun resetGame() {
@@ -133,6 +136,7 @@ fun GameActivity() {
             onDifficultyChange = { difficulty ->
                 selectedDifficulty = difficulty
                 gameLogic.setDifficultyLevel(selectedDifficulty)
+                saveDifficulty(context, selectedDifficulty)
                 resetGame()
             },
             selectedDifficulty = selectedDifficulty,
@@ -518,4 +522,34 @@ fun FooterButton(icon: ImageVector, onClick: () -> Unit) {
             modifier = Modifier.fillMaxSize()
         )
     }
+}
+
+fun saveDifficulty(context: Context, difficulty: GameLogic.DifficultyLevel) {
+    val sharedPreferences = context.getSharedPreferences("game_preferences", Context.MODE_PRIVATE)
+    val editor = sharedPreferences.edit()
+    editor.putString("difficulty", difficulty.name)
+    editor.apply()
+}
+
+fun loadDifficulty(context: Context): GameLogic.DifficultyLevel {
+    val sharedPreferences = context.getSharedPreferences("game_preferences", Context.MODE_PRIVATE)
+    val difficultyName = sharedPreferences.getString("difficulty", GameLogic.DifficultyLevel.Expert.name)
+    return GameLogic.DifficultyLevel.valueOf(difficultyName ?: GameLogic.DifficultyLevel.Expert.name)
+}
+
+fun saveScores(context: Context, playerOneWins: Int, playerTwoWins: Int, ties: Int) {
+    val sharedPreferences = context.getSharedPreferences("game_preferences", Context.MODE_PRIVATE)
+    val editor = sharedPreferences.edit()
+    editor.putInt("player_one_wins", playerOneWins)
+    editor.putInt("player_two_wins", playerTwoWins)
+    editor.putInt("ties", ties)
+    editor.apply()
+}
+
+fun loadScores(context: Context): Triple<Int, Int, Int> {
+    val sharedPreferences = context.getSharedPreferences("game_preferences", Context.MODE_PRIVATE)
+    val playerOneWins = sharedPreferences.getInt("player_one_wins", 0)
+    val playerTwoWins = sharedPreferences.getInt("player_two_wins", 0)
+    val ties = sharedPreferences.getInt("ties", 0)
+    return Triple(playerOneWins, playerTwoWins, ties)
 }
