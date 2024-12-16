@@ -54,9 +54,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 
 @Composable
-fun GameActivity() {
+fun GameActivity(
+    navController: NavController
+) {
     val context = LocalContext.current
     val soundPool = remember { createSoundPool(context) }
     val clickSoundId = remember { loadClickSound(context, soundPool) }
