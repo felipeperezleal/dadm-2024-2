@@ -1,5 +1,6 @@
 package com.example.reto_7
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -24,6 +25,9 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.firestore
+import kotlin.random.*
 
 @Composable
 fun HomeScreen(
@@ -60,7 +64,7 @@ fun HomeScreen(
                     .wrapContentWidth(Alignment.CenterHorizontally)
             ) {
                 Button(
-                    onClick = { navController.navigate("game_screen") },
+                    onClick = { navController.navigate("online_screen") },
                 ) {
                     Text(text = "Play Offline")
                 }
@@ -73,12 +77,34 @@ fun HomeScreen(
                     .wrapContentWidth(Alignment.CenterHorizontally)
             ) {
                 Button(
-                    onClick = { navController.navigate("game_screen") },
+                    onClick = {
+                        val gameId = Random.nextInt(100..999).toString()
+                        val gameData = hashMapOf(
+                            "gameId" to gameId,
+                            "playerOne" to mapOf("name" to "Player1", "uid" to "playerUID1"),
+                            "playerTwo" to null,
+                            "board" to listOf("1", "2", "3", "4", "5", "6", "7", "8", "9"),
+                            "turn" to "X",
+                            "status" to "waiting"
+                        )
+
+                        Firebase.firestore.collection("games")
+                            .document(gameId)
+                            .set(gameData)
+                            .addOnSuccessListener {
+                                navController.navigate("online_screen/$gameId")
+                            }
+                            .addOnFailureListener { exception ->
+                                Toast.makeText(context, "Error creating game: ${exception.message}", Toast.LENGTH_SHORT).show()
+                            }
+                    }
                 ) {
                     Text(text = "Online Game")
                 }
+
             }
         }
+
         Spacer(modifier = Modifier.height(32.dp))
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -92,10 +118,12 @@ fun HomeScreen(
             )
             HorizontalDivider(color = Color.LightGray, modifier = Modifier.width(72.dp))
         }
+
         Spacer(modifier = Modifier.height(32.dp))
+
         OutlinedTextField(
             value = code,
-            onValueChange = { code = it},
+            onValueChange = { code = it },
             label = { Text("Insert code") },
             modifier = Modifier
                 .fillMaxWidth()
@@ -107,8 +135,9 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
-                if (code.text.isNotEmpty()) {
-                    navController.navigate("game_screen")
+                val gameCode = code.text
+                if (gameCode.isNotEmpty()) {
+                    joinGame(gameCode, navController, context)
                 } else {
                     Toast.makeText(context, "Insert a valid code", Toast.LENGTH_SHORT).show()
                 }
@@ -118,4 +147,40 @@ fun HomeScreen(
             Text(text = "Join by code", fontSize = 16.sp)
         }
     }
+}
+
+fun joinGame(gameCode: String, navController: NavController, context: Context) {
+    Firebase.firestore.collection("games")
+        .document(gameCode)
+        .get()
+        .addOnSuccessListener { document ->
+            if (document.exists()) {
+                val game = document.data
+                val playerTwo = mapOf("name" to "Player2", "uid" to "playerUID2")
+
+                if (game?.get("status") == "waiting") {
+                    Firebase.firestore.collection("games")
+                        .document(gameCode)
+                        .update(
+                            "playerTwo", playerTwo,
+                            "status", "active"
+                        )
+                        .addOnSuccessListener {
+                            navController.navigate("online_screen/$gameCode")
+                        }
+                } else {
+                    Toast.makeText(
+                        context,
+                        "Game is not available or already full",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } else {
+                Toast.makeText(context, "Invalid game code", Toast.LENGTH_SHORT).show()
+            }
+        }
+        .addOnFailureListener { exception ->
+            Toast.makeText(context, "Error joining game: ${exception.message}", Toast.LENGTH_SHORT)
+                .show()
+        }
 }
