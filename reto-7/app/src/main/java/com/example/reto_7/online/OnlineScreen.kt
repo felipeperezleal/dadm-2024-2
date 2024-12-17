@@ -7,7 +7,6 @@ import android.media.AudioAttributes
 import android.media.SoundPool
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
@@ -48,7 +46,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -67,8 +64,8 @@ fun OnlineScreen(
     var gameState by remember { mutableStateOf<Map<String, Any>?>(null) }
     var isMuted by remember { mutableStateOf(false) }
     val soundPool = remember { createSoundPool(context) }
-    val clickSoundId = remember { loadClickSound(context, soundPool) }
-    val computerMoveSoundId = remember { loadComputerMoveSound(context, soundPool) }
+    val playerOneMoveSoundId = remember { playerOneMoveSoundId(context, soundPool) }
+    val playerTwoMoveSoundId = remember { loadPlayerTwoMoveSound(context, soundPool) }
 
     if (gameId != null) {
         Firebase.firestore.collection("games")
@@ -90,7 +87,7 @@ fun OnlineScreen(
     val playerOne = (gameState?.get("playerOne") as Map<String, String>)["name"]
     val playerTwo = (gameState?.get("playerTwo") as Map<String, String>?)?.get("name")
 
-    val gameMessage = if (gameState?.get("status") == "active") {
+    var gameMessage = if (gameState?.get("status") == "active") {
         "Turn: $currentPlayer"
     } else {
         val winner = gameState?.get("winner") as String?
@@ -111,18 +108,33 @@ fun OnlineScreen(
         }
     }
 
-    val onRefresh: () -> Unit = {
-    }
-
     val onMuteToggle: () -> Unit = {
         isMuted = !isMuted
     }
 
-    val boardState = Array(3) { row ->
+    var boardState = Array(3) { row ->
         Array(3) { col ->
             board[row * 3 + col]
         }
     }
+
+
+    val onRefresh: () -> Unit = {
+        boardState = Array(3) { Array(3) { "" } }
+        gameMessage = "Game Over! It's a tie!"
+
+        if (gameId != null) {
+            Firebase.firestore.collection("games")
+                .document(gameId)
+                .update(
+                    "board", List(9) { (it + 1).toString() },
+                    "turn", "X",
+                    "status", "active",
+                    "winner", "None"
+                )
+        }
+    }
+
 
     Box(
         Modifier
@@ -142,8 +154,9 @@ fun OnlineScreen(
             onMuteToggle = onMuteToggle,
             isMuted = isMuted,
             soundPool = soundPool,
-            clickSoundId = clickSoundId,
-            computerMoveSoundId = computerMoveSoundId,
+            clickSoundId = playerOneMoveSoundId,
+            playerOneMoveSoundId = playerOneMoveSoundId,
+            playerTwoMoveSoundId = playerTwoMoveSoundId,
             gameId = gameId
         )
     }
@@ -163,7 +176,8 @@ fun Screen(
     isMuted: Boolean,
     soundPool: SoundPool,
     clickSoundId: Int,
-    computerMoveSoundId: Int,
+    playerTwoMoveSoundId: Int,
+    playerOneMoveSoundId: Int,
     gameId: String?
 ) {
     val config = LocalConfiguration.current
@@ -194,7 +208,8 @@ fun Screen(
                 isMuted = isMuted,
                 soundPool = soundPool,
                 clickSoundId = clickSoundId,
-                computerMoveSoundId = computerMoveSoundId,
+                playerOneMoveSoundId = playerOneMoveSoundId,
+                playerTwoMoveSoundId = playerTwoMoveSoundId,
                 isGameOver = gameMessage.contains("Game Over"),
                 boardState = boardState
                 )
@@ -251,7 +266,8 @@ fun Screen(
                 soundPool = soundPool,
                 clickSoundId = clickSoundId,
                 boardState = boardState,
-                computerMoveSoundId = computerMoveSoundId,
+                playerOneMoveSoundId = playerOneMoveSoundId,
+                playerTwoMoveSoundId = playerTwoMoveSoundId,
                 isGameOver = gameMessage.contains("Game Over")
             )
         }
@@ -298,7 +314,8 @@ fun Board(
     isMuted: Boolean,
     soundPool: SoundPool,
     clickSoundId: Int,
-    computerMoveSoundId: Int,
+    playerOneMoveSoundId: Int,
+    playerTwoMoveSoundId: Int,
     boardState: Array<Array<String>>,
     isGameOver: Boolean
 ) {
@@ -326,7 +343,8 @@ fun Board(
                         isMuted = isMuted,
                         soundPool = soundPool,
                         clickSoundId = clickSoundId,
-                        computerMoveSoundId = computerMoveSoundId
+                        playerOneMoveSoundId = playerOneMoveSoundId,
+                        playerTwoMoveSoundId = playerTwoMoveSoundId
                     )
                     if (col < 2) {
                         VerticalDivider(color = Color.Gray, modifier = Modifier.height(100.dp))
@@ -348,16 +366,18 @@ fun TicTacToeButton(
     isMuted: Boolean,
     soundPool: SoundPool,
     clickSoundId: Int,
-    computerMoveSoundId: Int
+    playerOneMoveSoundId: Int,
+    playerTwoMoveSoundId: Int
 ) {
     Button(
         onClick = {
 //            if (!isGameOver && button == "") {
                 onClick()
+
                 if (!isMuted) {
                     soundPool.play(clickSoundId, 1f, 1f, 0, 0, 1f)
-                }
-//            }
+//                }
+            }
         },
         colors = ButtonDefaults.buttonColors(
             contentColor = Color.Black,
@@ -367,15 +387,22 @@ fun TicTacToeButton(
     ) {
         when (button) {
             "X" -> {
+                if (!isMuted && button == "X") {
+                    soundPool.play(playerOneMoveSoundId, 1f, 1f, 0, 0, 1f)
+                }
                 Image(painter = painterResource(id = R.drawable.ic_x), contentDescription = "X", modifier = Modifier.fillMaxSize())
             }
             "O" -> {
+                if (!isMuted && button == "O") {
+                    soundPool.play(playerTwoMoveSoundId, 1f, 1f, 0, 0, 1f)
+                }
                 Image(painter = painterResource(id = R.drawable.ic_o), contentDescription = "O", modifier = Modifier.fillMaxSize())
             }
             else -> Unit
         }
     }
 }
+
 
 fun createSoundPool(context: Context): SoundPool {
     return SoundPool.Builder()
@@ -389,11 +416,11 @@ fun createSoundPool(context: Context): SoundPool {
         .build()
 }
 
-fun loadClickSound(context: Context, soundPool: SoundPool): Int {
+fun playerOneMoveSoundId(context: Context, soundPool: SoundPool): Int {
     return soundPool.load(context, R.raw.tap, 1)
 }
 
-fun loadComputerMoveSound(context: Context, soundPool: SoundPool): Int {
+fun loadPlayerTwoMoveSound(context: Context, soundPool: SoundPool): Int {
     return soundPool.load(context, R.raw.tap2, 1)
 }
 
