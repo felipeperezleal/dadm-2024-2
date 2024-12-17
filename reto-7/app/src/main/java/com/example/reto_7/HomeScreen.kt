@@ -92,7 +92,7 @@ fun HomeScreen(
                             .document(gameId)
                             .set(gameData)
                             .addOnSuccessListener {
-                                navController.navigate("online_screen/$gameId")
+                                navController.navigate("online_screen/$gameId/Player1")
                             }
                             .addOnFailureListener { exception ->
                                 Toast.makeText(context, "Error creating game: ${exception.message}", Toast.LENGTH_SHORT).show()
@@ -166,7 +166,7 @@ fun joinGame(gameCode: String, navController: NavController, context: Context) {
                             "status", "active"
                         )
                         .addOnSuccessListener {
-                            navController.navigate("online_screen/$gameCode")
+                            navController.navigate("online_screen/$gameCode/Player2")
                         }
                 } else {
                     Toast.makeText(

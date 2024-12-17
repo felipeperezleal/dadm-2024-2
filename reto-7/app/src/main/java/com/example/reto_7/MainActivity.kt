@@ -32,11 +32,13 @@ class MainActivity : ComponentActivity() {
                                 navController = navController
                             )
                         }
-                        composable("online_screen/{gameId}") { backStackEntry ->
+                        composable("online_screen/{gameId}/{playerName}") { backStackEntry ->
                             val gameId = backStackEntry.arguments?.getString("gameId")
+                            val playerName = backStackEntry.arguments?.getString("playerName")
                             OnlineScreen(
                                 navController = navController,
-                                gameId = gameId
+                                gameId = gameId,
+                                playerName = playerName
                             )
                         }
                     }

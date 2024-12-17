@@ -49,7 +49,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.reto_7.R
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
@@ -57,7 +56,8 @@ import com.google.firebase.firestore.firestore
 @Composable
 fun OnlineScreen(
     navController: NavController,
-    gameId: String?
+    gameId: String?,
+    playerName: String?
 ) {
     val context = LocalContext.current
     val backgroundColor = Color.White
@@ -88,6 +88,12 @@ fun OnlineScreen(
     val playerOne = (gameState?.get("playerOne") as Map<String, String>)["name"]
     val playerTwo = (gameState?.get("playerTwo") as Map<String, String>?)?.get("name")
 
+    val playerSymbol = when (playerName) {
+        playerOne -> "X"
+        playerTwo -> "O"
+        else -> ""
+    }
+
     var gameMessage = if (gameState?.get("status") == "active") {
         "Turn: $currentPlayer"
     } else {
@@ -104,10 +110,11 @@ fun OnlineScreen(
     val ties = 0
 
     val onUserMove: (Int, Int) -> Unit = { row, col ->
-        if (gameId != null) {
-            makeMove(gameId, row * 3 + col, currentPlayer)
+        if (gameId != null && playerSymbol == currentPlayer) {
+            makeMove(gameId, row * 3 + col, playerSymbol)
         }
     }
+
 
     val onMuteToggle: () -> Unit = {
         isMuted = !isMuted
@@ -159,7 +166,8 @@ fun OnlineScreen(
             playerOneMoveSoundId = playerOneMoveSoundId,
             playerTwoMoveSoundId = playerTwoMoveSoundId,
             gameId = gameId,
-            navController = navController
+            navController = navController,
+            playerSymbol = playerSymbol
         )
     }
 }
@@ -181,7 +189,8 @@ fun Screen(
     playerTwoMoveSoundId: Int,
     playerOneMoveSoundId: Int,
     gameId: String?,
-    navController: NavController
+    navController: NavController,
+    playerSymbol: String
 ) {
     val config = LocalConfiguration.current
     val isPortrait = config.orientation == Configuration.ORIENTATION_PORTRAIT
@@ -214,7 +223,8 @@ fun Screen(
                 playerOneMoveSoundId = playerOneMoveSoundId,
                 playerTwoMoveSoundId = playerTwoMoveSoundId,
                 isGameOver = gameMessage.contains("Game Over"),
-                boardState = boardState
+                boardState = boardState,
+                playerSymbol = playerSymbol
                 )
             Text(
                 text = gameMessage,
@@ -273,7 +283,8 @@ fun Screen(
                 boardState = boardState,
                 playerOneMoveSoundId = playerOneMoveSoundId,
                 playerTwoMoveSoundId = playerTwoMoveSoundId,
-                isGameOver = gameMessage.contains("Game Over")
+                isGameOver = gameMessage.contains("Game Over"),
+                playerSymbol = playerSymbol
             )
         }
     }
@@ -322,7 +333,8 @@ fun Board(
     playerOneMoveSoundId: Int,
     playerTwoMoveSoundId: Int,
     boardState: Array<Array<String>>,
-    isGameOver: Boolean
+    isGameOver: Boolean,
+    playerSymbol: String,
 ) {
     Column(
         modifier = modifier.fillMaxSize(),
@@ -340,9 +352,7 @@ fun Board(
                     TicTacToeButton(
                         button = buttonText,
                         onClick = {
-//                            if (!isGameOver && buttonText == "") {
-                                onUserMove(row, col)
-//                            }
+                            onUserMove(row, col)
                         },
                         isGameOver = isGameOver,
                         isMuted = isMuted,
