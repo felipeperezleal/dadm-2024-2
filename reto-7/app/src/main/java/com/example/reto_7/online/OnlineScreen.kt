@@ -49,6 +49,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.reto_7.R
 import com.google.firebase.Firebase
 import com.google.firebase.firestore.firestore
@@ -157,7 +158,8 @@ fun OnlineScreen(
             clickSoundId = playerOneMoveSoundId,
             playerOneMoveSoundId = playerOneMoveSoundId,
             playerTwoMoveSoundId = playerTwoMoveSoundId,
-            gameId = gameId
+            gameId = gameId,
+            navController = navController
         )
     }
 }
@@ -178,7 +180,8 @@ fun Screen(
     clickSoundId: Int,
     playerTwoMoveSoundId: Int,
     playerOneMoveSoundId: Int,
-    gameId: String?
+    gameId: String?,
+    navController: NavController
 ) {
     val config = LocalConfiguration.current
     val isPortrait = config.orientation == Configuration.ORIENTATION_PORTRAIT
@@ -223,7 +226,8 @@ fun Screen(
             Footer(
                 onRefresh = onRefresh,
                 onMuteToggle = onMuteToggle,
-                isMuted = isMuted
+                isMuted = isMuted,
+                navController = navController
             )
             Spacer(modifier = Modifier.weight(0.2f))
         }
@@ -253,7 +257,8 @@ fun Screen(
                 Footer(
                     onRefresh = onRefresh,
                     onMuteToggle = onMuteToggle,
-                    isMuted = isMuted
+                    isMuted = isMuted,
+                    navController = navController
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
@@ -428,10 +433,12 @@ fun loadPlayerTwoMoveSound(context: Context, soundPool: SoundPool): Int {
 fun Footer(
     onRefresh: () -> Unit,
     onMuteToggle: () -> Unit,
-    isMuted: Boolean
+    isMuted: Boolean,
+    navController: NavController
 ) {
     val contextForExit = LocalContext.current
     var showExitDialog by remember { mutableStateOf(false) }
+
     Row(
         horizontalArrangement = Arrangement.SpaceEvenly,
         modifier = Modifier.fillMaxWidth()
@@ -446,7 +453,7 @@ fun Footer(
         ExitConfirmationDialog(
             onDismiss = { showExitDialog = false },
             onConfirmExit = {
-                (contextForExit as? Activity)?.finish()
+                navController.popBackStack()
             }
         )
     }
@@ -478,7 +485,7 @@ fun ExitConfirmationDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(text = "Are you sure you want to quit?")
+            Text(text = "Are you sure you want to exit?")
         },
         confirmButton = {
             TextButton(onClick = onConfirmExit) {
