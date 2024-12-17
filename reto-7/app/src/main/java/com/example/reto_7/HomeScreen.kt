@@ -64,7 +64,7 @@ fun HomeScreen(
                     .wrapContentWidth(Alignment.CenterHorizontally)
             ) {
                 Button(
-                    onClick = { navController.navigate("online_screen") },
+                    onClick = { navController.navigate("game_screen") },
                 ) {
                     Text(text = "Play Offline")
                 }

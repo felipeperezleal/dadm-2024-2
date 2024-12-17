@@ -7,6 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.reto_7.offline.GameActivity
+import com.example.reto_7.online.OnlineScreen
 import com.example.reto_7.ui.theme.Reto3Theme
 
 class MainActivity : ComponentActivity() {
