@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class GeminiViewModel : ViewModel() {
-    private val apiKey = R.string.api_key
+    private val apiKey = ""
     private val generativeModel = GenerativeModel(
         modelName = "gemini-2.0-flash",
         apiKey = apiKey
@@ -22,7 +22,15 @@ class GeminiViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = GeminiUiState.Loading
             try {
-                val response = generativeModel.generateContent(prompt)
+                val movieContext = """
+                    Eres un asistente especializado en recomendaciones de películas.
+                    Tu objetivo es ayudar al usuario a encontrar películas que le gusten.
+                    Pregunta sobre sus preferencias (género, actor, director, etc.) y recomienda películas basadas en eso.
+                    Si el usuario no proporciona suficiente información, haz preguntas para obtener más detalles.
+                """.trimIndent()
+
+                val fullPrompt = "$movieContext\n\nUsuario: $prompt"
+                val response = generativeModel.generateContent(fullPrompt)
                 _uiState.value = GeminiUiState.Success(response.text ?: "No response")
             } catch (e: Exception) {
                 _uiState.value = GeminiUiState.Error(e.message ?: "Unknown error")
